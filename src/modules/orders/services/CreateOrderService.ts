@@ -32,14 +32,15 @@ class CreateOrderService {
 
   public async execute({ customer_id, products }: IRequest): Promise<Order> {
     const customer = await this.customersRepository.findById(customer_id);
-    const productsFound = await this.productsRepository.findAllById(products);
-
-    if (!productsFound) {
-      throw new AppError('Product was not found');
-    }
 
     if (!customer) {
-      throw new AppError('Customer was not found');
+      throw new AppError('Customer was not found', 400);
+    }
+
+    const productsFound = await this.productsRepository.findAllById(products);
+
+    if (!productsFound.length) {
+      throw new AppError('Product was not found', 400);
     }
 
     const hasProductQuantity = productsFound.every(productFound => {
@@ -62,10 +63,12 @@ class CreateOrderService {
 
     const productsUpdatedFormatted = productsQuantityUpdated.map(
       ({ price, quantity, id }) => {
+        const quantityProduct = products.find(product => product.id === id);
+
         return {
           product_id: id,
           price,
-          quantity,
+          quantity: quantityProduct ? quantityProduct.quantity : quantity,
         };
       },
     );
